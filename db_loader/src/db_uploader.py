@@ -25,6 +25,10 @@ def limiter_jikan():
     return JIKAN
 
 
+def _extract_title(anime: Dict[str, Any]):
+    titles: Dict[str, str] = {title["type"]: title["title"] for title in anime["titles"]}
+    return titles.get("English", titles["Default"])
+
 def _get_anime_on_level(level: int, level_gap: int):
     limit: int = min(MAX_ON_PAGE, level_gap)
     skip_pages: int = ((level - 1) * level_gap) // limit
@@ -55,15 +59,18 @@ def get_all_main_characters(cluster: MongoClient, level_gap: int):
         for anime in tqdm.tqdm(_get_anime_on_level(level, level_gap), desc=f"Level {level}", total=level_gap):
             anime_characters: List[Any[str, Any]] = limiter_jikan().anime(
                 anime["mal_id"], extension="characters")["data"]
+            
+            anime_name: str = _extract_title(anime)
             for character in anime_characters:
                 if character["role"] != "Main" or character["character"]["mal_id"] in characters:
                     continue
+
                 result_character: Dict[str, Any] = {
                     "id": character["character"]["mal_id"],
                     "name": character["character"]["name"],
                     "image_url": character["character"]["images"]["jpg"]["image_url"],
                     "anime_url": anime["url"],
-                    "anime_name": anime["title"]
+                    "anime_name": anime_name
                 }
                 characters[character["character"]["mal_id"]] = result_character
 

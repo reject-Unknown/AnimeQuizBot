@@ -34,6 +34,8 @@ const (
 type CharactersData map[Level][]*Character
 
 func LoadData(user string, password string) CharactersData {
+	println(user)
+	println(password)
 	data := make(CharactersData)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -19,13 +19,13 @@ var (
 	User     string
 	Password string
 	Games    map[string]*bot.Game = make(map[string]*bot.Game)
-	Data     bot.CharactersData   = bot.LoadData(User, Password)
+	Data     bot.CharactersData
 )
 
-func init() {
+func Init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
-	flag.StringVar(&Token, "u", "", "Mongo DB Username")
-	flag.StringVar(&Token, "p", "", "Mongo DB Password UserName")
+	flag.StringVar(&User, "u", "", "Mongo DB Username")
+	flag.StringVar(&Password, "p", "", "Mongo DB Password UserName")
 	flag.Parse()
 }
 
@@ -230,6 +230,8 @@ func RandUniqueNumbers(min int, max int, count int) []int {
 }
 
 func main() {
+	Init()
+	Data = bot.LoadData(User, Password)
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
