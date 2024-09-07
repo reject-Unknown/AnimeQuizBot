@@ -1,0 +1,5 @@
+ratelimit
+requests
+jikanpy-v4
+pymongo
+tqdm
