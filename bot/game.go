@@ -1,29 +1,34 @@
 package bot
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+)
 
-var LevelMap = map[Level]string{
+var LevelMap = map[Difficulty]string{
 	EASY:   "Easy",
 	MEDIUM: "Medium",
 	HARD:   "Hard",
 }
 
 type Game struct {
-	ChannelID    string
-	UserID       string
-	Answer       chan string
-	Interaction  *discordgo.InteractionCreate
-	CurrentScore int
-	Question     int
+	User                *discordgo.User
+	CurrentInteraction  *discordgo.Interaction
+	PreviousInteraction *discordgo.Interaction
+	Difficulty          Difficulty
+	Answer              chan string
+	ChannelID           string
+	CurrentScore        int
+	Question            int
 }
 
-func NewGame(channelID string, userID string) *Game {
+func NewGame(channelID string, user *discordgo.User) *Game {
 	return &Game{
-		ChannelID:    channelID,
-		UserID:       userID,
-		Answer:       make(chan string),
-		Interaction:  nil,
-		CurrentScore: 0,
-		Question:     0,
+		User:                user,
+		CurrentInteraction:  nil,
+		PreviousInteraction: nil,
+		ChannelID:           channelID,
+		Answer:              make(chan string),
+		CurrentScore:        0,
+		Question:            0,
 	}
 }
