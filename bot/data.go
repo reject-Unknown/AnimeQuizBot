@@ -33,11 +33,11 @@ const (
 
 type CharactersData map[Difficulty][]*Character
 
-func LoadData(user string, password string) CharactersData {
+func LoadData(mongoCredentials *MongoCredentials) CharactersData {
 	data := make(CharactersData)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(fmt.Sprintf(CONNECTION_STR, user, password)))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoCredentials.ApplyURI))
 
 	if err != nil {
 		panic(err.Error())

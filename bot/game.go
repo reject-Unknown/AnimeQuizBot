@@ -17,17 +17,20 @@ type Game struct {
 	Difficulty          Difficulty
 	Answer              chan string
 	ChannelID           string
+	GuildID             string
 	CurrentScore        int
 	Question            int
 }
 
-func NewGame(channelID string, user *discordgo.User) *Game {
+func NewGame(channelID string, user *discordgo.User, difficulty Difficulty, guildId string) *Game {
 	return &Game{
 		User:                user,
 		CurrentInteraction:  nil,
 		PreviousInteraction: nil,
 		ChannelID:           channelID,
 		Answer:              make(chan string),
+		Difficulty:          difficulty,
+		GuildID:             guildId,
 		CurrentScore:        0,
 		Question:            0,
 	}

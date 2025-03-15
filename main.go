@@ -47,17 +47,19 @@ func GetUser(i *discordgo.Interaction) *discordgo.User {
 }
 
 func interactionCreate(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	context := bot.Context{
+		GlobalContext:     GlobalContext,
+		Session:           s,
+		InteractionCreate: i,
+	}
+
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
-		var command string = i.ApplicationCommandData().Name
-		if command == "animequiz" {
-			context := bot.Context{
-				GlobalContext:     GlobalContext,
-				Session:           s,
-				InteractionCreate: i,
-			}
-
+		switch i.ApplicationCommandData().Name {
+		case "animequiz":
 			commands.CharacterQuiz(&context)
+		case "leaderboard":
+			commands.Leaderboard(&context)
 		}
 
 	case discordgo.InteractionMessageComponent:
@@ -93,10 +95,12 @@ func RandUniqueNumbers(min int, max int, count int) []int {
 
 func main() {
 	Init()
+	var mongoCredentials *bot.MongoCredentials = bot.NewMongoCredentials(User, Password)
 
 	GlobalContext = &bot.GlobalContext{
-		Games: make(map[string]*bot.Game),
-		Data:  bot.LoadData(User, Password),
+		Games:            make(map[string]*bot.Game),
+		Data:             bot.LoadData(mongoCredentials),
+		MongoCredentials: mongoCredentials,
 	}
 
 	dg, err := discordgo.New("Bot " + Token)
@@ -120,6 +124,30 @@ func main() {
 			},
 		},
 	})
+
+	if err != nil {
+		println(err.Error())
+	}
+
+	_, err = dg.ApplicationCommandCreate("728036143785967706", "", &discordgo.ApplicationCommand{
+		Name:        "leaderboard",
+		Description: "Leaderboard of Anime Quiz",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "difficult",
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Description: "Map to display",
+				Required:    true,
+				Choices:     mapsToCommandChoices(),
+			},
+			{
+				Name:        "page",
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Description: "Map to display",
+			},
+		},
+	})
+
 	if err != nil {
 		println(err.Error())
 	}

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
@@ -8,12 +9,53 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/reject-Unknown/AnimeQuizBot/bot"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/rand"
 )
 
 const (
 	QUESTION_SCORE int = 100
 )
+
+func saveResultToDatabase(globalContext *bot.GlobalContext, game *bot.Game) {
+	if game.CurrentScore == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(globalContext.MongoCredentials.ApplyURI))
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	collection := client.Database("QuizDB").Collection("Leaderboard")
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	docToInsert := bson.D{
+		{Key: "guild_id", Value: game.GuildID},
+		{Key: "user_id", Value: game.User.ID},
+		{Key: "username", Value: game.User.GlobalName},
+		{Key: "difficulty", Value: game.Difficulty},
+		{Key: "score", Value: game.CurrentScore},
+	}
+	cur, err := collection.Find(ctx, docToInsert)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if cur.TryNext(ctx) {
+		return
+	}
+
+	collection.InsertOne(ctx, docToInsert)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func getEditMessageOnCorrectAnswer(message *discordgo.Message) *discordgo.MessageEdit {
 	emded := message.Embeds[0]
@@ -160,12 +202,11 @@ func CharacterQuiz(context *bot.Context) {
 		log.Fatal(err)
 	}
 
-	var game *bot.Game = bot.NewGame(interactionCreate.ChannelID, user)
+	var game *bot.Game = bot.NewGame(interactionCreate.ChannelID, user, difficulty, interactionCreate.GuildID)
 	context.GlobalContext.Games[game.ChannelID] = game
 
 	defer delete(context.GlobalContext.Games, game.ChannelID)
 	var gameData []*bot.Character = context.GlobalContext.Data[difficulty]
-
 	var gameOver bool = false
 	for !gameOver {
 		game.Question++
@@ -179,7 +220,7 @@ func CharacterQuiz(context *bot.Context) {
 		var message *discordgo.MessageSend = makeGuessMessage(characters, game, correctAnswer)
 		sendedMessage, err := session.ChannelMessageSendComplex(interactionCreate.ChannelID, message)
 		if err != nil {
-			log.Fatal(err)
+			println(err.Error())
 		}
 
 		select {
@@ -230,7 +271,7 @@ func CharacterQuiz(context *bot.Context) {
 				gameOver = true
 			}
 
-		case <-time.After(10 * time.Second):
+		case <-time.After(12 * time.Second):
 			if game.CurrentInteraction != nil {
 				session.InteractionResponseDelete(game.CurrentInteraction)
 			}
@@ -242,4 +283,6 @@ func CharacterQuiz(context *bot.Context) {
 			gameOver = true
 		}
 	}
+	saveResultToDatabase(context.GlobalContext, game)
+	println("Game is Over!")
 }
